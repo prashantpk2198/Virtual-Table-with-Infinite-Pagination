@@ -35,8 +35,8 @@ const itemsPerPage = 25;
 // }
 
 export default function CustomTable({ columns, setmData, mdata }) {
-    const allData = mdata.map((item, index) => ({ ...item, ID: index }));
-//   const allData = mdata;
+  const allData = mdata.map((item, index) => ({ ...item, ID: index }));
+  //   const allData = mdata;
   console.log(allData.length);
 
   const tableContainerRef = useRef(null);
@@ -50,14 +50,16 @@ export default function CustomTable({ columns, setmData, mdata }) {
   const [rowSelection, setRowSelection] = useState({});
 
   useEffect(() => {
-    setPage((prev) => 0);
-    setData((prev) => []);
-    if (mdata.length < itemsPerPage) {
+    // Reset page and data when mdata (filter results) changes
+    setPage(0);
+    setData([]);
+    setHasMore(true);
+    if (mdata.length <= itemsPerPage) {
       setHasMore(false);
-    } else {
-      setHasMore(true);
     }
-  }, [mdata]);
+    // Fetch the initial page of filtered data
+    fetchData(0);
+  }, [mdata, searchfilter]);
   console.log(data.length);
 
   const fetchData = async (page) => {
@@ -68,21 +70,25 @@ export default function CustomTable({ columns, setmData, mdata }) {
     if (newData.length < itemsPerPage) {
       setHasMore(false);
     }
-    setData((prevData) => {
-      const existingIds = prevData.map((item) => item.ID);
-      // Filter out duplicates from newData
-      const filteredNewData = newData.filter(
-        (item) => !existingIds.includes(item.ID)
-      );
-      return [...prevData, ...filteredNewData];
-    });
+    if (page === 0) {
+      setData(newData);
+    } else {
+      setData((prevData) => {
+        const existingIds = prevData.map((item) => item.ID);
+        // Filter out duplicates from newData
+        const filteredNewData = newData.filter(
+          (item) => !existingIds.includes(item.ID)
+        );
+        return [...prevData, ...filteredNewData];
+      });
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData(page);
   }, [page, mdata]);
-    
+
   useEffect(() => {
     console.log("Page:", page);
     console.log("Loading:", loading);
@@ -202,12 +208,12 @@ export default function CustomTable({ columns, setmData, mdata }) {
       },
     },
   });
-    
-    // need to try debouncing scroll events
+
+  // need to try debouncing scroll events
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: useCallback(() => 40,[]), // Adjust this based on the actual row height
+    estimateSize: useCallback(() => 40, []), // Adjust this based on the actual row height
     overscan: 5, // Increase overscan for smoother scrolling
     // measureElement:
     //   typeof window !== "undefined" &&
