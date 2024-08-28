@@ -35,8 +35,8 @@ const itemsPerPage = 25;
 // }
 
 export default function CustomTable({ columns, setmData, mdata }) {
-  //   const allData = mdata.map((item, index) => ({ ...item, ID: index }));
-  const allData = mdata;
+    const allData = mdata.map((item, index) => ({ ...item, ID: index }));
+//   const allData = mdata;
   console.log(allData.length);
 
   const tableContainerRef = useRef(null);
@@ -89,10 +89,23 @@ export default function CustomTable({ columns, setmData, mdata }) {
     console.log("Has more data:", hasMore);
   }, [page, loading, hasMore]);
 
+  // Debouncing function
+  function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
   useEffect(() => {
     const container = tableContainerRef.current;
     if (container) {
-      const handleScroll = () => {
+      const handleScroll = debounce(() => {
         if (!hasMore || loading) return;
 
         requestAnimationFrame(() => {
@@ -100,7 +113,7 @@ export default function CustomTable({ columns, setmData, mdata }) {
           if (container) {
             const { scrollTop, scrollHeight, clientHeight } = container;
             if (
-              scrollHeight - scrollTop - clientHeight < 200 &&
+              scrollHeight - scrollTop - clientHeight < 300 &&
               !loading &&
               data.length < allData.length
             ) {
@@ -108,7 +121,7 @@ export default function CustomTable({ columns, setmData, mdata }) {
             }
           }
         });
-      };
+      }, 100); // Debounce delay set to 200ms
 
       container.addEventListener("scroll", handleScroll);
       return () => container.removeEventListener("scroll", handleScroll);
@@ -190,17 +203,17 @@ export default function CustomTable({ columns, setmData, mdata }) {
     },
   });
     
-    
+    // need to try debouncing scroll events
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => 40, // Adjust this based on the actual row height
-    overscan: 10, // Increase overscan for smoother scrolling
-    measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
-        ? (element) => element?.getBoundingClientRect().height
-        : undefined,
+    estimateSize: useCallback(() => 40,[]), // Adjust this based on the actual row height
+    overscan: 5, // Increase overscan for smoother scrolling
+    // measureElement:
+    //   typeof window !== "undefined" &&
+    //   navigator.userAgent.indexOf("Firefox") === -1
+    //     ? (element) => element?.getBoundingClientRect().height
+    //     : undefined,
   });
 
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -276,7 +289,7 @@ export default function CustomTable({ columns, setmData, mdata }) {
                   <Tr
                     key={row.id}
                     data-index={virtualRow.index}
-                    ref={(node) => rowVirtualizer.measureElement(node)}
+                    ref={rowVirtualizer.measureElement}
                     style={{
                       position: "absolute",
                       transform: `translateY(${virtualRow.start}px)`, //this should always be a `style` as it changes on scroll
